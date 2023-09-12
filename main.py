@@ -87,7 +87,7 @@ df = pd.DataFrame(table_data[1:], columns=table_data[0])
 st.write("Enter your data:")
 data = st.data_editor(df)
 
-profiles_count = st.slider('how many profiles does you problem have', min_value=1, max_value=num_rows-1, value=1, step=1, key="profiles")
+profiles_count = st.slider('how many profiles does you problem have', min_value=1, max_value=max(num_rows-1,2), value=1, step=1, key="profiles")
 profiles = []
 profiles_table = [[''],['q(b)'],['p(b)'],['v(b)'],['g(b)']]
 for i in range(5):
