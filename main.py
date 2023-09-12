@@ -2,11 +2,10 @@ import pandas as pd
 import streamlit as st
 import numpy as np
 
-def comparison(a,b,profile):
-    weights = profile[0]
-    q = profile[1]
-    p = profile[2]
-    v = profile[3]
+def comparison(a,b,profile,weights):
+    q = profile[0]
+    p = profile[1]
+    v = profile[2]
     #checking valid data
     err = np.all(np.array(b)>0)
     if err == False:
@@ -67,17 +66,19 @@ num_rows = st.slider("Enter the number of alternatives:", min_value=0, max_value
 # Create a 2D list to store table data
 table_data = []
 
-for k in range(num_rows+1):
+for k in range(num_rows+2):
     row = []
     for j in range(num_cols+1):
         if k == 0 and j != 0:
             cell_value = "criterion_no."+str(j)
-        elif k>=1 and j==0:
-            cell_value = "alternative "+str(k)
+        elif k==1 and j==0:
+            cell_value = "weights" 
+        elif k>=2 and j==0:
+            cell_value = "alternative "+str(k-1)
         elif k==0 and j==0:
             cell_value = "*"
         else:
-            cell_value = 0
+            cell_value = 0.0
         row.append(cell_value)
     table_data.append(row)
 
@@ -86,15 +87,15 @@ df = pd.DataFrame(table_data[1:], columns=table_data[0])
 st.write("Enter your data:")
 data = st.data_editor(df)
 
-profiles_count = st.slider('how many profiles does you problem have', min_value=1, max_value=num_cols-1, value=1, step=1, key="profiles")
+profiles_count = st.slider('how many profiles does you problem have', min_value=1, max_value=num_rows-1, value=1, step=1, key="profiles")
 profiles = []
-profiles_table = [[''],['w'],['q(b)'],['p(b)'],['v(b)'],['g(b)']]
-for i in range(6):
+profiles_table = [[''],['q(b)'],['p(b)'],['v(b)'],['g(b)']]
+for i in range(5):
     for z in range(num_cols):
         if i==0:
             profiles_table[i].append("criterion_no."+str(z))
         else:
-            profiles_table[i].append(0)
+            profiles_table[i].append(0.0)
 profiles_df = pd.DataFrame(profiles_table[1:], columns=profiles_table[0])
 
 for i in range(profiles_count):
@@ -103,7 +104,7 @@ for i in range(profiles_count):
     profiles.append(dt_ed)
 
 l_value = st.number_input('please enter the lamda value',min_value=0.0,max_value=1.0,value=0.7)
-pessimicity = st.selectbox('Do you want to run the optimistic method or the pessimistic',('optimistic','pessimistic'))
+pessimicity = st.selectbox('Do you want to run the optimistic method or the pessimistic',('pessimistic','optimistic'))
 
 submited = st.button(label="Submit all tables", type='primary')
 
@@ -112,11 +113,11 @@ if submited:
     s_greek=[0,0]
     final_results = [[],[]]
     unfinished = False
-    for i in range(num_rows):
+    for i in range(1,num_rows+1):
         for j in range(profiles_count):
             profiles_list = profiles[j].values.tolist()
-            s_greek[0] = comparison(data.iloc[i][1:],profiles_list[4][1:],[row[1:] for row in profiles_list[:4]])
-            s_greek[1] = comparison(profiles_list[4][1:],data.iloc[i][1:],[row[1:] for row in profiles_list[:4]])
+            s_greek[0] = comparison(data.iloc[i][1:],profiles_list[3][1:],[row[1:] for row in profiles_list[:3]],data.iloc[0][1:])
+            s_greek[1] = comparison(profiles_list[3][1:],data.iloc[i][1:],[row[1:] for row in profiles_list[:3]],data.iloc[0][1:])
             if s_greek[0]==(-100) or s_greek[1]==-100:
                 unfinished = True
                 break
@@ -142,8 +143,8 @@ if submited:
 
     if unfinished:
         st.write('Your data was invalid')
-
-    st.table(final_results)
+    else:
+        st.table(final_results)
     
 
 
