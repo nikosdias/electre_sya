@@ -54,7 +54,7 @@ dataset = st.container()
 
 with header:
     st.title('electre tri implementation')
-    st.text('made entirely by nikos diaourtas in seven days in his house in chania')
+    st.text('made by nikos diaourtas')
 
 
 st.title("Dynamic Table App")
