@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import numpy as np
+import matplotlib.pyplot as plt
 
 def comparison(a,b,profile,weights):
     q = profile[0]
@@ -54,10 +55,7 @@ dataset = st.container()
 
 with header:
     st.title('electre tri implementation')
-    st.text('made by nikos diaourtas')
 
-
-st.title("Dynamic Table App")
 
 # Get user input for the number of rows and columns
 num_cols = st.slider('how many cruteria does you problem have', min_value=0, max_value=20, value=1, step=1, key="cols")
@@ -93,7 +91,7 @@ profiles_table = [[''],['q(b)'],['p(b)'],['v(b)'],['g(b)']]
 for i in range(5):
     for z in range(num_cols):
         if i==0:
-            profiles_table[i].append("criterion_no."+str(z))
+            profiles_table[i].append("criterion_no."+str(z+1))
         else:
             profiles_table[i].append(0.0)
 profiles_df = pd.DataFrame(profiles_table[1:], columns=profiles_table[0])
@@ -144,8 +142,49 @@ if submited:
     if unfinished:
         st.write('Your data was invalid')
     else:
-        st.table(final_results)
-    
+        y, end_line = [0],[0]
+        x = [[0] for abc in range(profiles_count)]
+        for p in range(num_cols):
+            y.append(p)
+        for k in range(profiles_count):
+            profiles_list = profiles[k].values.tolist()
+            x[k].extend(profiles_list[3][1:])
+        max_val = max(x[profiles_count-1])
+        end_line.extend([max_val*1.2]*num_cols)
+        x.append(end_line)
+
+        # Create a figure and axis
+        plt.figure().set_figwidth(12)
+        for y1 in y:
+            plt.hlines(y1,0,(max_val*1.2),colors='grey',linewidth=0.5)
+        # Plot the line
+        for i in range(len(x)):
+            plt.plot(x[i], y,linewidth=0.6,color='black')
+
+        # Fill the area between the vertical lines
+        for i in range(len(x)):
+            plt.fill_between(x[i], y,num_cols-1,  color='grey', alpha=(0.4))
+
+
+        final_results = np.array(final_results)
+        classes = []
+        for i in range(profiles_count+1):
+            classes.append(np.where(final_results[1]==i)[0])
+
+        cols = st.columns((2*profiles_count)+1)
+
+        counter = profiles_count+1
+        for cl in classes:
+            cols[2*(profiles_count-counter+1)].header('Class ' + str(counter)+':')
+            final_classes = []
+            for c in cl:
+                final_classes.append(data.iloc[c+1][0])
+            cols[2*(profiles_count-counter+1)].table(final_classes)
+            if counter!=1:
+                cols[2*(profiles_count-counter+1)+1].header("<")
+            counter -= 1
+        # Show the plot
+        st.pyplot(plt)
 
 
 
