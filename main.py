@@ -3,7 +3,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-def comparison(a,b,profile,weights):
+def comparison(a,b,profile,weights,desc_list):
     q = profile[0]
     p = profile[1]
     v = profile[2]
@@ -25,24 +25,41 @@ def comparison(a,b,profile,weights):
     #start of the comparison function
     c_small = []
     for i in range(len(a)):
-        if a[i] <= b[i] - p[i]:
-            c_small.append(0)
-        elif a[i] > b[i] - q[i]:
-            c_small.append(1)
+        if i in desc_list:
+            if a[i] >= b[i] + p[i]:
+                c_small.append(0)
+            elif a[i] > b[i] + q[i]:
+                c_small.append(1)
+            else:
+                c_small.append((b[i]-a[i]+p[i])/(p[i]-q[i]))
         else:
-            c_small.append((a[i]-b[i]+p[i])/(p[i]-q[i]))
+            if a[i] <= b[i] - p[i]:
+                c_small.append(0)
+            elif a[i] > b[i] - q[i]:
+                c_small.append(1)
+            else:
+                c_small.append((a[i]-b[i]+p[i])/(p[i]-q[i]))
     c_big = np.dot(np.array(c_small),np.array(weights))/sum(weights)
 
     d_small=[]
     s_greek = 1
     for i in range(len(a)):
-        if a[i] > b[i] - p[i]:
-            d_small.append(0)
-        elif a[i] <= b[i] - v[i]:
-            d_small.append(1)
-            s_greek = 0
+        if i in desc_list:
+            if a[i] < b[i] + p[i]:
+                d_small.append(0)
+            elif a[i] > b[i] + v[i]:
+                d_small.append(1)
+                s_greek = 0
+            else:
+                d_small.append((a[i]-b[i]-p[i])/(v[i]-p[i]))
         else:
-            d_small.append((b[i]-a[i]-p[i])/(v[i]-p[i]))
+            if a[i] > b[i] - p[i]:
+                d_small.append(0)
+            elif a[i] <= b[i] - v[i]:
+                d_small.append(1)
+                s_greek = 0
+            else:
+                d_small.append((b[i]-a[i]-p[i])/(v[i]-p[i]))
     for i in range(len(a)):
         if s_greek!=0 and d_small[i]>c_big:
             s_greek *= (1-d_small[i])/(1-c_big)
@@ -85,6 +102,16 @@ df = pd.DataFrame(table_data[1:], columns=table_data[0])
 st.write("Enter your data:")
 data = st.data_editor(df)
 
+col_descend1, col_descend2 = st.columns([0.7,0.3])
+desc_list = []
+col_descend1.write("Specify the criteria that have descending value of preference (e.g. price):")
+for j in range(num_cols):
+    desc_list.append(col_descend2.toggle(label="criterion_no."+str(j+1)))
+desc_arr = np.where(np.array(desc_list)==True)
+desc_list = desc_arr[0].tolist()
+
+st.divider()
+
 profiles_count = st.slider('how many profiles does you problem have', min_value=1, max_value=max(num_rows-1,2), value=1, step=1, key="profiles")
 profiles = []
 profiles_table = [[''],['q(b)'],['p(b)'],['v(b)'],['g(b)']]
@@ -114,8 +141,8 @@ if submited:
     for i in range(1,num_rows+1):
         for j in range(profiles_count):
             profiles_list = profiles[j].values.tolist()
-            s_greek[0] = comparison(data.iloc[i][1:],profiles_list[3][1:],[row[1:] for row in profiles_list[:3]],data.iloc[0][1:])
-            s_greek[1] = comparison(profiles_list[3][1:],data.iloc[i][1:],[row[1:] for row in profiles_list[:3]],data.iloc[0][1:])
+            s_greek[0] = comparison(data.iloc[i][1:],profiles_list[3][1:],[row[1:] for row in profiles_list[:3]],data.iloc[0][1:],desc_list)
+            s_greek[1] = comparison(profiles_list[3][1:],data.iloc[i][1:],[row[1:] for row in profiles_list[:3]],data.iloc[0][1:],desc_list)
             if s_greek[0]==(-100) or s_greek[1]==-100:
                 unfinished = True
                 break
@@ -153,15 +180,15 @@ if submited:
         end_line.extend([max_val*1.2]*num_cols)
         x.append(end_line)
 
-        # Create a figure and axis
+        # set width and draw horizontal lines
         plt.figure().set_figwidth(12)
         for y1 in y:
             plt.hlines(y1,0,(max_val*1.2),colors='grey',linewidth=0.5)
-        # Plot the line
+        # Plot the lines
         for i in range(len(x)):
             plt.plot(x[i], y,linewidth=0.6,color='black')
 
-        # Fill the area between the vertical lines
+        # Fill the area between lines
         for i in range(len(x)):
             plt.fill_between(x[i], y,num_cols-1,  color='grey', alpha=(0.4))
 
