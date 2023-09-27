@@ -3,6 +3,8 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Η συνάρτηση comparison() συγκρινει μια εναλλακτική a με ένα profile b και επιστρεφει το σ(a,b) 
+# a = g(a) , b = g(b), profile = [q,p,v], weights = k, desc_list = indexes of descending criteria
 def comparison(a,b,profile,weights,desc_list):
     q = profile[0]
     p = profile[1]
@@ -22,7 +24,9 @@ def comparison(a,b,profile,weights,desc_list):
     err = np.all(np.array(subtract)>0)
     if err == False:
         return -100
-    #start of the comparison function
+    #start of the comparison 
+
+    #Υπολογισμός δείκτη ολικής συμφωνίας c_big
     c_small = []
     for i in range(len(a)):
         if i in desc_list:
@@ -39,8 +43,10 @@ def comparison(a,b,profile,weights,desc_list):
                 c_small.append(1)
             else:
                 c_small.append((a[i]-b[i]+p[i])/(p[i]-q[i]))
+    
     c_big = np.dot(np.array(c_small),np.array(weights))/sum(weights)
 
+    #Υπολογισμος δείκτη μερικής ασυμφωνίας d_small
     d_small=[]
     s_greek = 1
     for i in range(len(a)):
@@ -71,16 +77,17 @@ header = st.container()
 dataset = st.container()
 
 with header:
-    st.title('electre tri implementation')
+    st.title('ELECTRE TRI IMPLEMENTATION')
 
 
-# Get user input for the number of rows and columns
+# input for the number of rows and columns
 num_cols = st.slider('how many cruteria does you problem have', min_value=0, max_value=20, value=1, step=1, key="cols")
 num_rows = st.slider("Enter the number of alternatives:", min_value=0, max_value=20, value=0, step=1, key="rows")
 
 # Create a 2D list to store table data
 table_data = []
 
+# Create the main table
 for k in range(num_rows+2):
     row = []
     for j in range(num_cols+1):
@@ -97,11 +104,12 @@ for k in range(num_rows+2):
         row.append(cell_value)
     table_data.append(row)
 
+# Display the main table to get input
 df = pd.DataFrame(table_data[1:], columns=table_data[0]) 
-
 st.write("Enter your data:")
 data = st.data_editor(df)
 
+# Input about which are the descending criteria
 col_descend1, col_descend2 = st.columns([0.7,0.3])
 desc_list = []
 col_descend1.write("Specify the criteria that have descending value of preference (e.g. price):")
@@ -112,9 +120,11 @@ desc_list = desc_arr[0].tolist()
 
 st.divider()
 
+# Get the number of profiles. profiles_table[] is used to create a profile table , profiles[] stores every profile table
 profiles_count = st.slider('how many profiles does you problem have', min_value=1, max_value=max(num_rows-1,2), value=1, step=1, key="profiles")
 profiles = []
 profiles_table = [[''],['q(b)'],['p(b)'],['v(b)'],['g(b)']]
+# create empty table for a profile
 for i in range(5):
     for z in range(num_cols):
         if i==0:
@@ -123,6 +133,7 @@ for i in range(5):
             profiles_table[i].append(0.0)
 profiles_df = pd.DataFrame(profiles_table[1:], columns=profiles_table[0])
 
+# Display profiles tables to get input
 for i in range(profiles_count):
     st.title("profile no "+str(i+1)+":")
     dt_ed = st.data_editor(profiles_df,key=i)
@@ -135,14 +146,18 @@ submited = st.button(label="Submit all tables", type='primary')
 
 
 if submited:
+    #s_greek[0] stores σ(a,b) , s_greek[1] stores σ(b,a).
+    #final_results[0] stores the index of the alternative and final_results[1] stores the class it is assigned to
     s_greek=[0,0]
     final_results = [[],[]]
     unfinished = False
+    #Every alternative is compared with every profile
     for i in range(1,num_rows+1):
         for j in range(profiles_count):
             profiles_list = profiles[j].values.tolist()
             s_greek[0] = comparison(data.iloc[i][1:],profiles_list[3][1:],[row[1:] for row in profiles_list[:3]],data.iloc[0][1:],desc_list)
             s_greek[1] = comparison(profiles_list[3][1:],data.iloc[i][1:],[row[1:] for row in profiles_list[:3]],data.iloc[0][1:],desc_list)
+            #Break if invalid input
             if s_greek[0]==(-100) or s_greek[1]==-100:
                 unfinished = True
                 break
@@ -158,6 +173,8 @@ if submited:
             else:
                 comparison_result=-1
             
+            #The programm requires the profiles to be ordered. If the alternative reaches a profile that is better, 
+            #it gets asigned to the according class
             if (pessimicity == 'optimistic' and comparison_result == 0) or (pessimicity == 'pessimistic' and comparison_result != 1):
                 final_results[0].append(i)
                 final_results[1].append(j)
@@ -169,6 +186,8 @@ if submited:
     if unfinished:
         st.write('Your data was invalid')
     else:
+
+        #Create the data for the plot
         y, end_line = [0],[0]
         x = [[0] for abc in range(profiles_count)]
         for p in range(num_cols):
@@ -192,14 +211,16 @@ if submited:
         for i in range(len(x)):
             plt.fill_between(x[i], y,num_cols-1,  color='grey', alpha=(0.4))
 
-
+        #final_results gets converted to classes[] which has the following structure
+        #classes=[['alternative1','alternative3'],['alternative2','alternative4']] in this example there are 2 classes
+        #class 1 contains alternatives 1 and 3, and class 2 contains alternatives 2 and 4
         final_results = np.array(final_results)
         classes = []
         for i in range(profiles_count+1):
             classes.append(np.where(final_results[1]==i)[0])
 
+        # Display the classes side by side
         cols = st.columns((2*profiles_count)+1)
-
         counter = profiles_count+1
         for cl in classes:
             cols[2*(profiles_count-counter+1)].header('Class ' + str(counter)+':')
@@ -210,6 +231,7 @@ if submited:
             if counter!=1:
                 cols[2*(profiles_count-counter+1)+1].header("<")
             counter -= 1
+
         # Show the plot
         st.pyplot(plt)
 
